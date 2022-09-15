@@ -1,0 +1,207 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"net"
+	"os"
+	"os/signal"
+	"runtime"
+	"sync"
+	"time"
+
+	"golang.org/x/sync/errgroup"
+	"tailscale.com/ipn/store/mem"
+	"tailscale.com/tsnet"
+	"zombiezen.com/go/ini"
+	"zombiezen.com/go/log"
+)
+
+const programName = "tailscale-lb"
+
+func main() {
+	flagSet := flag.NewFlagSet(programName, flag.ContinueOnError)
+	flagSet.Usage = func() {
+		fmt.Fprintf(flagSet.Output(), "usage: %s CONFIG [...]\n", programName)
+		flagSet.PrintDefaults()
+	}
+	var cfg configuration
+	flagSet.StringVar(&cfg.hostname, "hostname", "", "host`name` to send to Tailscale")
+	debug := flagSet.Bool("debug", false, "show debugging output")
+
+	const exitUsage = 64
+	if err := flagSet.Parse(os.Args[1:]); err == flag.ErrHelp {
+		os.Exit(exitUsage)
+	} else if err != nil {
+		os.Exit(1)
+	}
+
+	const baseLogFlags = log.ShowDate | log.ShowTime
+	if *debug {
+		log.SetDefault(log.New(os.Stderr, "", baseLogFlags|log.ShowLevel, nil))
+	} else {
+		log.SetDefault(&log.LevelFilter{
+			Min:    log.Info,
+			Output: log.New(os.Stderr, "", baseLogFlags, nil),
+		})
+	}
+
+	ctx, cancel := signal.NotifyContext(context.Background(), interruptSignals...)
+	if flagSet.NArg() == 0 {
+		log.Errorf(ctx, "No configuration files given")
+		flagSet.PrintDefaults()
+		os.Exit(exitUsage)
+	}
+	iniFiles, err := ini.ParseFiles(nil, flagSet.Args()...)
+	if err != nil {
+		log.Errorf(ctx, "%v", err)
+		os.Exit(1)
+	}
+	if err := cfg.fill(iniFiles); err != nil {
+		log.Errorf(ctx, "%v", err)
+		os.Exit(1)
+	}
+
+	err = run(ctx, &cfg)
+	cancel()
+	if err != nil {
+		log.Errorf(ctx, "%v", err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context, cfg *configuration) error {
+	if cfg.hostname == "" {
+		return fmt.Errorf("hostname not set in configuration")
+	}
+
+	srv := tsnet.Server{
+		// TODO(soon): Permit persisting state.
+		Store:     new(mem.Store),
+		Ephemeral: true,
+
+		Hostname: cfg.hostname,
+		AuthKey:  cfg.authKey,
+		Logf: func(format string, args ...any) {
+			ent := log.Entry{Time: time.Now(), Level: log.Info}
+			if _, file, line, ok := runtime.Caller(2); ok {
+				ent.File = file
+				ent.Line = line
+			}
+			logger := log.Default()
+			if !logger.LogEnabled(ent) {
+				return
+			}
+			ent.Msg = fmt.Sprintf(format, args...)
+			if n := len(ent.Msg); n > 0 && ent.Msg[n-1] == '\n' {
+				ent.Msg = ent.Msg[:n-1]
+			}
+			logger.Log(ctx, ent)
+		},
+	}
+	if err := srv.Start(); err != nil {
+		return err
+	}
+	log.Infof(ctx, "Host %s connected to Tailscale", cfg.hostname)
+	// TODO(maybe): Add more information about IP address?
+
+	var wg sync.WaitGroup
+	defer func() {
+		log.Debugf(ctx, "Shutting down...")
+		if err := srv.Close(); err != nil {
+			log.Errorf(ctx, "While shutting down: %v", err)
+		}
+		log.Debugf(ctx, "Waiting for handlers to stop...")
+		wg.Wait()
+	}()
+	systemResolver := new(net.Resolver)
+	for port, pc := range cfg.tcpPorts {
+		log.Debugf(ctx, "Listening for TCP port %d", port)
+		l, err := srv.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err != nil {
+			return err
+		}
+		lb := newLoadBalancer(systemResolver, pc.backends)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			listenTCPPort(ctx, l, lb)
+		}()
+	}
+	<-ctx.Done()
+	return nil
+}
+
+func listenTCPPort(ctx context.Context, l net.Listener, lb *loadBalancer) {
+	ctx, cancel := context.WithCancel(ctx)
+	var wg sync.WaitGroup
+	defer func() {
+		cancel()
+		if err := l.Close(); err != nil {
+			log.Errorf(ctx, "Closing listener: %v", err)
+		}
+		wg.Wait()
+	}()
+
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			log.Debugf(ctx, "Accept on %v returned error (stopping listener): %v", l.Addr(), err)
+			return
+		}
+		log.Debugf(ctx, "Accepted connection from %v on %v", conn.RemoteAddr(), conn.LocalAddr())
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			handleTCPConn(ctx, conn, lb)
+		}()
+	}
+}
+
+func handleTCPConn(ctx context.Context, clientConn net.Conn, lb *loadBalancer) {
+	defer func() {
+		if err := clientConn.Close(); err != nil {
+			log.Errorf(ctx, "%v", err)
+		}
+	}()
+
+	pickCtx, cancelPick := context.WithTimeout(ctx, 30*time.Second)
+	backendAddr, err := lb.pick(pickCtx)
+	cancelPick()
+	if err != nil {
+		log.Warnf(ctx, "Unable to find suitable backend for %v on %v: %v", clientConn.RemoteAddr(), clientConn.LocalAddr(), err)
+		return
+	}
+	log.Debugf(ctx, "Picked backend %v for %v on %v", backendAddr, clientConn.RemoteAddr(), clientConn.LocalAddr())
+	backendConn, err := new(net.Dialer).DialContext(ctx, "tcp", backendAddr.String())
+	if err != nil {
+		log.Warnf(ctx, "Connect to backend for %v on %v: %v", clientConn.RemoteAddr(), clientConn.LocalAddr(), err)
+		return
+	}
+
+	grp, ctx := errgroup.WithContext(ctx)
+	grp.Go(func() error {
+		<-ctx.Done()
+		clientConn.SetDeadline(time.Now())
+		backendConn.SetDeadline(time.Now())
+		return nil
+	})
+	grp.Go(func() error {
+		if _, err := io.Copy(backendConn, clientConn); err != nil {
+			log.Warnf(ctx, "Connection for %v on %v (backend %v): %v", clientConn.RemoteAddr(), clientConn.LocalAddr(), backendAddr, err)
+		}
+		return errConnDone
+	})
+	grp.Go(func() error {
+		if _, err := io.Copy(clientConn, backendConn); err != nil {
+			log.Warnf(ctx, "Connection for %v on %v (backend %v): %v", clientConn.RemoteAddr(), clientConn.LocalAddr(), backendAddr, err)
+		}
+		return errConnDone
+	})
+	grp.Wait()
+}
+
+var errConnDone = errors.New("connection finished")
