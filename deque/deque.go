@@ -65,10 +65,36 @@ func (d *Deque[T]) Append(x T) {
 	d.back = wrapIndex(d.back+1, len(d.array))
 }
 
+func (d *Deque[T]) Filter(pred func(T) bool) {
+	if d.front == d.back {
+		return
+	}
+	oldLen := d.Len()
+	n := 0
+	for i, end := d.front, d.front+oldLen; i < end; i++ {
+		x := d.array[wrapIndex(i, len(d.array))]
+		if pred(x) {
+			d.array[wrapIndex(d.front+n, len(d.array))] = x
+			n++
+		}
+	}
+	clearStart := wrapIndex(d.front+n, len(d.array))
+	if clearStart <= d.back {
+		clear(d.array[clearStart:d.back])
+	} else {
+		clear(d.array[clearStart:])
+		clear(d.array[:d.back])
+	}
+	d.back = wrapIndex(d.back+n-oldLen, len(d.array))
+}
+
 // Rotate rotates the deque n places to the left,
 // such that the n'th item will be at the front of the deque.
 // Negative values rotate the deque to the right.
 func (d *Deque[T]) Rotate(n int) {
+	if d.front == d.back {
+		return
+	}
 	len := d.Len()
 	n = wrapIndex(n, len)
 	if n == 0 {
@@ -153,6 +179,13 @@ func (d *Deque[T]) grow() {
 	d.array = newArray
 	d.front = 0
 	d.back = oldLen
+}
+
+func clear[T any](s []T) {
+	var zero T
+	for i := range s {
+		s[i] = zero
+	}
 }
 
 func count(front, back, size int) int {

@@ -151,12 +151,86 @@ func TestGrowSplit(t *testing.T) {
 	}
 }
 
+func TestFilter(t *testing.T) {
+	predicates := map[string]func(int) bool{
+		"isEven":        func(i int) bool { return i%2 == 0 },
+		"lessThanThree": func(i int) bool { return i < 3 },
+		"isZero":        func(i int) bool { return i == 0 },
+	}
+	tests := []struct {
+		offset int
+		init   []int
+		pred   string
+		want   []int
+	}{
+		{
+			pred: "isEven",
+			want: []int{},
+		},
+		{
+			init: seq(0, 10),
+			pred: "isEven",
+			want: []int{0, 2, 4, 6, 8},
+		},
+		{
+			init: seq(0, 10),
+			pred: "lessThanThree",
+			want: []int{0, 1, 2},
+		},
+		{
+			offset: initialCapacity - 2,
+			init:   seq(0, initialCapacity-3),
+			pred:   "lessThanThree",
+			want:   []int{0, 1, 2},
+		},
+		{
+			offset: initialCapacity - 3,
+			init:   seq(0, initialCapacity-3),
+			pred:   "isZero",
+			want:   []int{0},
+		},
+	}
+	for _, test := range tests {
+		d := new(Deque[int])
+		if test.offset != 0 {
+			d.Append(0)
+			for i := 0; i < test.offset; i++ {
+				d.Append(0)
+				d.PopFront()
+			}
+		}
+		for _, x := range test.init {
+			d.Append(x)
+		}
+		if test.offset != 0 {
+			d.PopFront()
+		}
+
+		d.Filter(predicates[test.pred])
+		if diff := cmp.Diff(test.want, toSlice(d), cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("<Deque%v offset=%d>.Filter(%s) (-want +got):\n%s", test.init, test.offset, test.pred, diff)
+		}
+	}
+}
+
 func TestRotate(t *testing.T) {
 	tests := []struct {
 		init   []int
 		rotate int
 		want   []int
 	}{
+		{
+			rotate: 0,
+			want:   []int{},
+		},
+		{
+			rotate: 1,
+			want:   []int{},
+		},
+		{
+			rotate: -1,
+			want:   []int{},
+		},
 		{
 			init:   seq(0, 10),
 			rotate: 0,
