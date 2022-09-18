@@ -10,10 +10,13 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
 	"golang.org/x/sync/errgroup"
+	"tailscale.com/client/tailscale"
+	"tailscale.com/ipn"
 	"tailscale.com/ipn/store/mem"
 	"tailscale.com/tsnet"
 	"zombiezen.com/go/ini"
@@ -124,6 +127,17 @@ func run(ctx context.Context, cfg *configuration) error {
 		wg.Wait()
 	}()
 
+	wg.Add(1)
+	client, err := srv.LocalClient()
+	if err != nil {
+		// LocalClient should not return an error if server successfully started.
+		return err
+	}
+	go func() {
+		defer wg.Done()
+		logStartupInfo(ctx, client)
+	}()
+
 	systemResolver := new(net.Resolver)
 	for port, pc := range cfg.tcpPorts {
 		log.Infof(ctx, "Listening for TCP port %d", port)
@@ -140,6 +154,47 @@ func run(ctx context.Context, cfg *configuration) error {
 	}
 	<-ctx.Done()
 	return nil
+}
+
+func logStartupInfo(ctx context.Context, client *tailscale.LocalClient) {
+	tick := time.NewTicker(2 * time.Second)
+	defer tick.Stop()
+	var prevAuthURL string
+	for {
+		if err := ctx.Err(); err != nil {
+			log.Debugf(ctx, "Stopping startup info poll: %v", err)
+			return
+		}
+		status, err := client.Status(ctx)
+		if err != nil {
+			log.Errorf(ctx, "Unable to query Tailscale status (will retry): %v", err)
+			goto wait
+		}
+		if status.BackendState == ipn.NeedsLogin.String() {
+			if status.AuthURL != prevAuthURL {
+				log.Infof(ctx, "To start this load balancer, restart with TS_AUTHKEY set, or go to: %s", status.AuthURL)
+				prevAuthURL = status.AuthURL
+			}
+		} else if len(status.TailscaleIPs) > 0 {
+			sb := new(strings.Builder)
+			for i, addr := range status.TailscaleIPs {
+				if i > 0 {
+					sb.WriteString(", ")
+				}
+				sb.WriteString(addr.String())
+			}
+			log.Infof(ctx, "Listening on Tailscale addresses: %s", sb)
+			return
+		} else {
+			log.Debugf(ctx, "Backend state = %q and has no addresses", status.BackendState)
+		}
+
+	wait:
+		select {
+		case <-tick.C:
+		case <-ctx.Done():
+		}
+	}
 }
 
 func listenTCPPort(ctx context.Context, l net.Listener, lb *loadBalancer) {
