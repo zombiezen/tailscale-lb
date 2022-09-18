@@ -25,6 +25,8 @@ let
       root = ./.;
       patterns = nix-gitignore.withGitignoreFile extraIgnores root;
       extraIgnores = [
+        "LICENSE"
+        "README.md"
         ".envrc"
         "*.nix"
         "/.github/"
@@ -49,6 +51,9 @@ buildGoModule {
   ldflags = [ "-s" "-w" ];
 
   meta = {
+    description = "Basic load-balancer for forwarding Tailscale TCP traffic";
+    homepage = "https://github.com/zombiezen/tailscale-lb";
+    license = lib.licenses.asl20;
     maintainers = [ lib.maintainers.zombiezen ];
   };
 }
