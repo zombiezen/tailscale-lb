@@ -83,7 +83,7 @@ resource "github_actions_secret" "gcs_hmac_access_id" {
 
 resource "github_actions_secret" "gcs_hmac_secret" {
   repository      = "tailscale-lb"
-  secret_name     = "GCS_HMAC_SECRET"
+  secret_name     = "GCS_HMAC_SECRET_ACCESS_KEY"
   plaintext_value = google_storage_hmac_key.github_actions.secret
 }
 

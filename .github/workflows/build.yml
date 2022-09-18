@@ -7,6 +7,7 @@ on:
       - '**'
       - '!.github/**'
       - '!.gitignore'
+      - '!infra/**'
       - '.github/workflows/build.yml'
   workflow_dispatch:
 
