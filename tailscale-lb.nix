@@ -31,6 +31,7 @@ let
         "*.nix"
         "/.github/"
         ".vscode/"
+        "/infra/"
         "result"
         "result-*"
       ];

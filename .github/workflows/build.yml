@@ -17,6 +17,13 @@ jobs:
     steps:
       - name: Install Nix
         uses: cachix/install-nix-action@v16
+      - name: Set up cache
+        uses: zombiezen/setup-nix-cache-action@v0.1.0
+        with:
+          substituters: s3://zombiezen-tailscale-lb-nixcache?endpoint=https://storage.googleapis.com
+          secret_keys: ${{ secrets.NIX_PRIVATE_KEY }}
+          aws_access_key_id: ${{ secrets.GCS_HMAC_ACCESS_ID }}
+          aws_secret_access_key: ${{ secrets.GCS_HMAC_SECRET_ACCESS_KEY }}
       - name: Check out code
         uses: actions/checkout@v2
       - name: Build and test
