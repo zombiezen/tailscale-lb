@@ -44,7 +44,7 @@ buildGoModule {
 
   inherit src;
 
-  vendorHash = "sha256-s63ZWaytdIE8iojdbhWp9NnTo4g/QaL/1opTnk4i97g=";
+  vendorHash = "sha256-OhHy4bI8LDtugvgoo0cNmcvLVRk0/2+TKUT9JTfFrT0=";
 
   ldflags = [ "-s" "-w" ];
 
