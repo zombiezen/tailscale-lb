@@ -22,6 +22,8 @@ import (
 
 const programName = "tailscale-lb"
 
+const tailscaleLogLevel = log.Debug - 1
+
 func main() {
 	flagSet := flag.NewFlagSet(programName, flag.ContinueOnError)
 	flagSet.Usage = func() {
@@ -31,6 +33,7 @@ func main() {
 	var cfg configuration
 	flagSet.StringVar(&cfg.hostname, "hostname", "", "host`name` to send to Tailscale")
 	debug := flagSet.Bool("debug", false, "show debugging output")
+	debugTailscale := flagSet.Bool("debug-tailscale", false, "show all debugging output, including Tailscale")
 
 	const exitUsage = 64
 	if err := flagSet.Parse(os.Args[1:]); err == flag.ErrHelp {
@@ -40,8 +43,13 @@ func main() {
 	}
 
 	const baseLogFlags = log.ShowDate | log.ShowTime
-	if *debug {
+	if *debugTailscale {
 		log.SetDefault(log.New(os.Stderr, "", baseLogFlags|log.ShowLevel, nil))
+	} else if *debug {
+		log.SetDefault(&log.LevelFilter{
+			Min:    log.Debug,
+			Output: log.New(os.Stderr, "", baseLogFlags|log.ShowLevel, nil),
+		})
 	} else {
 		log.SetDefault(&log.LevelFilter{
 			Min:    log.Info,
@@ -86,7 +94,7 @@ func run(ctx context.Context, cfg *configuration) error {
 		Hostname: cfg.hostname,
 		AuthKey:  cfg.authKey,
 		Logf: func(format string, args ...any) {
-			ent := log.Entry{Time: time.Now(), Level: log.Info}
+			ent := log.Entry{Time: time.Now(), Level: tailscaleLogLevel}
 			if _, file, line, ok := runtime.Caller(2); ok {
 				ent.File = file
 				ent.Line = line
@@ -106,8 +114,6 @@ func run(ctx context.Context, cfg *configuration) error {
 		return err
 	}
 	log.Infof(ctx, "Host %s connected to Tailscale", cfg.hostname)
-	// TODO(maybe): Add more information about IP address?
-
 	var wg sync.WaitGroup
 	defer func() {
 		log.Debugf(ctx, "Shutting down...")
@@ -117,9 +123,10 @@ func run(ctx context.Context, cfg *configuration) error {
 		log.Debugf(ctx, "Waiting for handlers to stop...")
 		wg.Wait()
 	}()
+
 	systemResolver := new(net.Resolver)
 	for port, pc := range cfg.tcpPorts {
-		log.Debugf(ctx, "Listening for TCP port %d", port)
+		log.Infof(ctx, "Listening for TCP port %d", port)
 		l, err := srv.Listen("tcp", fmt.Sprintf(":%d", port))
 		if err != nil {
 			return err
@@ -136,17 +143,31 @@ func run(ctx context.Context, cfg *configuration) error {
 }
 
 func listenTCPPort(ctx context.Context, l net.Listener, lb *loadBalancer) {
+	var closeOnce sync.Once
+	closeListener := func() {
+		closeOnce.Do(func() {
+			if err := l.Close(); err != nil {
+				log.Errorf(ctx, "Closing listener: %v", err)
+			}
+		})
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-ctx.Done()
+		closeListener()
+	}()
 	defer func() {
 		cancel()
-		if err := l.Close(); err != nil {
-			log.Errorf(ctx, "Closing listener: %v", err)
-		}
+		closeListener()
 		wg.Wait()
 	}()
 
 	for {
+		log.Debugf(ctx, "Waiting for connection on %v", l.Addr())
 		conn, err := l.Accept()
 		if err != nil {
 			log.Debugf(ctx, "Accept on %v returned error (stopping listener): %v", l.Addr(), err)
