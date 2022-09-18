@@ -21,3 +21,6 @@ jobs:
         uses: actions/checkout@v2
       - name: Build and test
         run: nix-build -A tailscale-lb
+
+permissions:
+  contents: read

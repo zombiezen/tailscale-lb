@@ -37,6 +37,7 @@ let
     in builtins.path {
       name = "tailscale-lb-source";
       path = root;
+      filter = nix-gitignore.gitignoreFilterPure (_: _: true) patterns root;
     };
 in
 
@@ -49,6 +50,8 @@ buildGoModule {
   vendorHash = "sha256-OhHy4bI8LDtugvgoo0cNmcvLVRk0/2+TKUT9JTfFrT0=";
 
   ldflags = [ "-s" "-w" ];
+
+  subPackages = [ "." ];
 
   meta = {
     description = "Basic load-balancer for forwarding Tailscale TCP traffic";

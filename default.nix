@@ -17,10 +17,45 @@
 { pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/a0b7e70db7a55088d3de0cc370a59f9fbcc906c3.tar.gz") {}
 }:
 
+let
+  tailscale-lb = pkgs: pkgs.callPackage ./tailscale-lb.nix {
+    buildGoModule = pkgs.buildGo119Module;
+  };
+
+  dockerImageName = "ghcr.io/zombiezen/tailscale-lb";
+  mkDocker =
+    { pkgs
+    , name ? dockerImageName
+    , tag ? null
+    }:
+    pkgs.dockerTools.buildImage {
+      inherit name;
+      tag = if builtins.isNull tag then (tailscale-lb pkgs).version else tag;
+
+      copyToRoot = pkgs.buildEnv {
+        name = "tailscale-lb";
+        paths = [
+          (tailscale-lb pkgs)
+          pkgs.cacert
+        ];
+      };
+
+      config = {
+        Entrypoint = [ "/bin/tailscale-lb" ];
+      };
+    };
+in
+
 {
   inherit pkgs;
   go = pkgs.go_1_19;
-  tailscale-lb = pkgs.callPackage ./tailscale-lb.nix {
-    buildGoModule = pkgs.buildGo119Module;
+  tailscale-lb = tailscale-lb pkgs;
+
+  inherit mkDocker;
+  docker = {
+    x86_64 = args@{ name ? dockerImageName, tag ? null }:
+      mkDocker (args // { pkgs = pkgs.pkgsCross.gnu64; });
+    arm64 = args@{ name ? dockerImageName, tag ? null }:
+      mkDocker (args // { pkgs = pkgs.pkgsCross.aarch64-multiplatform; });
   };
 }
