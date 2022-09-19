@@ -28,22 +28,31 @@ let
     , name ? dockerImageName
     , tag ? null
     }:
-    pkgs.dockerTools.buildImage {
-      inherit name;
-      tag = if builtins.isNull tag then (tailscale-lb pkgs).version else tag;
+    let
+      tailscale-lb' = tailscale-lb pkgs;
+    in
+      pkgs.dockerTools.buildImage {
+        inherit name;
+        tag = if builtins.isNull tag then tailscale-lb'.version else tag;
 
-      copyToRoot = pkgs.buildEnv {
-        name = "tailscale-lb";
-        paths = [
-          (tailscale-lb pkgs)
-          pkgs.cacert
-        ];
-      };
+        copyToRoot = pkgs.buildEnv {
+          name = "tailscale-lb";
+          paths = [
+            tailscale-lb'
+            pkgs.cacert
+          ];
+        };
 
-      config = {
-        Entrypoint = [ "/bin/tailscale-lb" ];
+        config = {
+          Entrypoint = [ "/bin/tailscale-lb" ];
+
+          Labels = {
+            "org.opencontainers.image.source" = "https://github.com/zombiezen/tailscale-lb";
+            "org.opencontainers.image.licenses" = "Apache-2.0";
+            "org.opencontainers.image.version" = tailscale-lb'.version;
+          };
+        };
       };
-    };
   docker = {
     amd64 = args@{ name ? dockerImageName, tag ? null }:
       mkDocker (args // { pkgs = pkgs.pkgsCross.musl64; });
