@@ -53,7 +53,7 @@ in
 
   inherit mkDocker;
   docker = {
-    x86_64 = args@{ name ? dockerImageName, tag ? null }:
+    amd64 = args@{ name ? dockerImageName, tag ? null }:
       mkDocker (args // { pkgs = pkgs.pkgsCross.gnu64; });
     arm64 = args@{ name ? dockerImageName, tag ? null }:
       mkDocker (args // { pkgs = pkgs.pkgsCross.aarch64-multiplatform; });

@@ -1,0 +1,44 @@
+name: Docker
+on:
+  push:
+    tags:
+      - '^v[0-9]*'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: ["amd64", "arm64"]
+    steps:
+      - name: Install Nix
+        uses: cachix/install-nix-action@v16
+      - name: Set up cache
+        uses: zombiezen/setup-nix-cache-action@v0.1.0
+        with:
+          substituters: s3://zombiezen-tailscale-lb-nixcache?endpoint=https://storage.googleapis.com
+          secret_keys: ${{ secrets.NIX_PRIVATE_KEY }}
+          aws_access_key_id: ${{ secrets.GCS_HMAC_ACCESS_ID }}
+          aws_secret_access_key: ${{ secrets.GCS_HMAC_SECRET_ACCESS_KEY }}
+      - name: Check out code
+        uses: actions/checkout@v2
+      - id: build
+        name: Build
+        run: |
+          image_name=ghcr.io/zombiezen/tailscale-lb
+          image_tag="$(echo ${{ github.ref_name }} | sed -e 's/^v//')"
+          echo "::set-output name=name::$image_name"
+          echo "::set-output name=tag::$image_tag"
+          nix-build \
+            -E 'with import ./. {}; docker.${{ matrix.arch }}' \
+            --argstr name "$image_name" \
+            --argstr tag "$image_tag"
+      - name: Load into Docker
+        run: docker load < result
+      - name: Push to GitHub Container Registry
+        run: docker push ${{ steps.build.outputs.name }}:${{ steps.build.outputs.tag }}
+
+permissions:
+  contents: read
+  packages: write
