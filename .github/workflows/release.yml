@@ -4,6 +4,9 @@ on:
     tags:
       - 'v[0-9]*'
 
+env:
+  IMAGE_NAME: ghcr.io/zombiezen/tailscale-lb
+
 jobs:
   docker:
     name: Docker Push
@@ -30,18 +33,40 @@ jobs:
       - id: build
         name: Build
         run: |
-          image_name=ghcr.io/zombiezen/tailscale-lb
-          image_tag="$(echo ${{ github.ref_name }} | sed -e 's/^v//')"
-          echo "::set-output name=name::$image_name"
-          echo "::set-output name=tag::$image_tag"
+          IMAGE_TAG="$(echo ${{ github.ref_name }} | sed -e 's/^v//')-${{ matrix.arch }}"
+          echo "::set-output name=tag::$IMAGE_TAG"
           nix-build \
             -E 'with import ./. {}; docker.${{ matrix.arch }}' \
-            --argstr name "$image_name" \
-            --argstr tag "$image_tag"
+            --argstr name "$IMAGE_NAME" \
+            --argstr tag "$IMAGE_TAG"
       - name: Load into Docker
         run: docker load < result
       - name: Push to GitHub Container Registry
-        run: docker push ${{ steps.build.outputs.name }}:${{ steps.build.outputs.tag }}
+        run: docker push "${IMAGE_NAME}:${IMAGE_TAG}"
+        env:
+          IMAGE_TAG: ${{ steps.build.outputs.tag }}
+  docker-manifest:
+    name: Create Multi-Arch Image
+    needs: [docker]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log into GitHub Container Registry
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u zombiezen --password-stdin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: manifest
+        name: Create manifest
+        run: |
+          IMAGE_TAG="$(echo ${{ github.ref_name }} | sed -e 's/^v//')"
+          echo "::set-output name=tag::$IMAGE_TAG"
+          docker manifest create \
+            "${IMAGE_NAME}:${IMAGE_TAG}" \
+            --amend "${IMAGE_NAME}:${IMAGE_TAG}-amd64" \
+            --amend "${IMAGE_NAME}:${IMAGE_TAG}-arm64"
+      - name: Push to GitHub Container Registry
+        run: docker manifest push "${IMAGE_NAME}:${IMAGE_TAG}"
+        env:
+          IMAGE_TAG: ${{ steps.manifest.outputs.tag }}
 
 permissions:
   contents: read
