@@ -44,6 +44,12 @@ let
         Entrypoint = [ "/bin/tailscale-lb" ];
       };
     };
+  docker = {
+    amd64 = args@{ name ? dockerImageName, tag ? null }:
+      mkDocker (args // { pkgs = pkgs.pkgsCross.musl64; });
+    arm64 = args@{ name ? dockerImageName, tag ? null }:
+      mkDocker (args // { pkgs = pkgs.pkgsCross.aarch64-multiplatform-musl; });
+  };
 in
 
 {
@@ -51,11 +57,11 @@ in
   go = pkgs.go_1_19;
   tailscale-lb = tailscale-lb pkgs;
 
-  inherit mkDocker;
-  docker = {
-    amd64 = args@{ name ? dockerImageName, tag ? null }:
-      mkDocker (args // { pkgs = pkgs.pkgsCross.gnu64; });
-    arm64 = args@{ name ? dockerImageName, tag ? null }:
-      mkDocker (args // { pkgs = pkgs.pkgsCross.aarch64-multiplatform; });
-  };
+  inherit mkDocker docker;
+
+  ci = pkgs.linkFarm "tailscale-lb-ci" [
+    { name = "tailscale-lb"; path = tailscale-lb pkgs; }
+    { name = "docker-image-tailscale-lb-amd64.tar.gz"; path = docker.amd64 {}; }
+    { name = "docker-image-tailscale-lb-arm64.tar.gz"; path = docker.arm64 {}; }
+  ];
 }

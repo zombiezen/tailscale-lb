@@ -28,7 +28,12 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
       - name: Build and test
-        run: nix-build -A tailscale-lb
+        run: nix-build -A ci
+      - name: Upload Docker images
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-images
+          path: result/docker-image-*.tar.gz
 
 permissions:
   contents: read
