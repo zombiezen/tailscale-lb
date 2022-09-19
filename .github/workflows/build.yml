@@ -27,14 +27,16 @@ jobs:
           aws_secret_access_key: ${{ secrets.GCS_HMAC_SECRET_ACCESS_KEY }}
       - name: Check out code
         uses: actions/checkout@v2
-      - name: Build and test
-        run: nix-build -A ci
+      - id: build
+        name: Build and test
+        run: |
+          nix-build -A ci
+          echo "::set-output name=result::$(readlink -f result)"
       - name: Upload Docker images
         uses: actions/upload-artifact@v3
         with:
           name: docker-images
-          # "./" to work around https://github.com/actions/upload-artifact/issues/92
-          path: result/./docker-image-*.tar.gz
+          path: ${{ steps.build.outputs.result }}/docker-image-*.tar.gz
 
 permissions:
   contents: read
