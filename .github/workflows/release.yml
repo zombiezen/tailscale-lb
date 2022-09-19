@@ -1,17 +1,21 @@
-name: Docker
+name: Release
 on:
   push:
     tags:
       - 'v[0-9]*'
 
 jobs:
-  build:
-    name: Build
+  docker:
+    name: Docker Push
     runs-on: ubuntu-latest
     strategy:
       matrix:
         arch: ["amd64", "arm64"]
     steps:
+      - name: Log into GitHub Container Registry
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u zombiezen --password-stdin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Nix
         uses: cachix/install-nix-action@v16
       - name: Set up cache
