@@ -39,7 +39,7 @@ let
           name = "tailscale-lb";
           paths = [
             tailscale-lb'
-            pkgs.cacert
+            pkgs.dockerTools.caCertificates
           ];
         };
 
