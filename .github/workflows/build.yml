@@ -33,7 +33,8 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: docker-images
-          path: result/docker-image-*.tar.gz
+          # "./" to work around https://github.com/actions/upload-artifact/issues/92
+          path: result/./docker-image-*.tar.gz
 
 permissions:
   contents: read
