@@ -9,7 +9,7 @@ env:
 
 jobs:
   docker:
-    name: Docker Build
+    name: Docker Push
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -38,15 +38,15 @@ jobs:
           nix-build \
             -E 'with import ./. {}; docker.${{ matrix.arch }}' \
             --argstr name "$IMAGE_NAME" \
-            --argstr tag "$IMAGE_TAG" \
-            --out-link "docker-image-${IMAGE_TAG}-${{ matrix.arch }}.tar.gz"
-      - name: Upload image tarball
-        uses: actions/upload-artifact@v3
-        with:
-          name: docker-images
-          path: docker-image-*.tar.gz
+            --argstr tag "$IMAGE_TAG"
+      - name: Load into Docker
+        run: docker load < result
+      - name: Push to GitHub Container Registry
+        run: docker push "${IMAGE_NAME}:${IMAGE_TAG}"
+        env:
+          IMAGE_TAG: ${{ steps.build.outputs.tag }}
   docker-manifest:
-    name: Push Multi-Arch Manifest List
+    name: Create Multi-Arch Image
     needs: [docker]
     runs-on: ubuntu-latest
     steps:
@@ -54,15 +54,6 @@ jobs:
         run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u zombiezen --password-stdin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Download image tarballs
-        uses: actions/download-artifact@v3
-        with:
-          name: docker-images
-      - name: Load images into Docker daemon
-        run: |
-          for name in docker-image-*.tar.gz; do
-            docker load < "$name"
-          done
       - id: manifest
         name: Create manifest
         run: |
@@ -70,8 +61,8 @@ jobs:
           echo "::set-output name=tag::$IMAGE_TAG"
           docker manifest create \
             "${IMAGE_NAME}:${IMAGE_TAG}" \
-            "${IMAGE_NAME}:${IMAGE_TAG}-amd64" \
-            "${IMAGE_NAME}:${IMAGE_TAG}-arm64"
+            --amend "${IMAGE_NAME}:${IMAGE_TAG}-amd64" \
+            --amend "${IMAGE_NAME}:${IMAGE_TAG}-arm64"
       - name: Push to GitHub Container Registry
         run: docker manifest push "${IMAGE_NAME}:${IMAGE_TAG}"
         env:
