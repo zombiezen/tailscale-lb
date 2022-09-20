@@ -61,8 +61,8 @@ jobs:
           echo "::set-output name=tag::$IMAGE_TAG"
           docker manifest create \
             "${IMAGE_NAME}:${IMAGE_TAG}" \
-            --amend "${IMAGE_NAME}:${IMAGE_TAG}-amd64" \
-            --amend "${IMAGE_NAME}:${IMAGE_TAG}-arm64"
+            "${IMAGE_NAME}:${IMAGE_TAG}-amd64" \
+            "${IMAGE_NAME}:${IMAGE_TAG}-arm64"
       - name: Push to GitHub Container Registry
         run: docker manifest push "${IMAGE_NAME}:${IMAGE_TAG}"
         env:
