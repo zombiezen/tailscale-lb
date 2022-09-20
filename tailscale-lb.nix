@@ -27,6 +27,7 @@ let
       extraIgnores = [
         "LICENSE"
         "README.md"
+        "CHANGELOG.md"
         ".envrc"
         "*.nix"
         "/.github/"
