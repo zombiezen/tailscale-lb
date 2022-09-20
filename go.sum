@@ -297,3 +297,5 @@ zombiezen.com/go/ini v0.0.0-20220822235435-cadd66f53f27 h1:ptxb7hDASqFDkTOAIH4AN
 zombiezen.com/go/ini v0.0.0-20220822235435-cadd66f53f27/go.mod h1:+TD85cq5iHXlTnhdJbaD4sBijR0y4ZnF5zkYjP8hRpE=
 zombiezen.com/go/log v1.1.0-beta1 h1:W9/YvlR//MHUPbZJC9tl7+GiryHLuGv/S8Z5SUTXjXY=
 zombiezen.com/go/log v1.1.0-beta1/go.mod h1:Eos1rXF8JpgK+h6NYITdTJslqFJJA3SaIJHMU75Sqfg=
+zombiezen.com/go/xcontext v1.0.0 h1:ggjoy/K+SKliNkvLszlTEQbajk1te/4AjzeBVTJcF4U=
+zombiezen.com/go/xcontext v1.0.0/go.mod h1:bXPuLPkAwZShCRDueoyymB/Hjn9qt+S+rfkXqGIKcSc=

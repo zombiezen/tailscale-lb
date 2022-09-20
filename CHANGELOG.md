@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/zombiezen/tailscale-lb/compare/v0.1.1...main
 
+## [Unreleased][]
+
+### Changed
+
+- Automatically log out from Tailscale on graceful exit.
+
 ## [0.1.1][] - 2022-09-19
 
 [0.1.1]: https://github.com/zombiezen/tailscale-lb/releases/tag/v0.1.1

@@ -37,6 +37,7 @@ import (
 	"tailscale.com/tsnet"
 	"zombiezen.com/go/ini"
 	"zombiezen.com/go/log"
+	"zombiezen.com/go/xcontext"
 )
 
 const programName = "tailscale-lb"
@@ -149,6 +150,14 @@ func run(ctx context.Context, cfg *configuration) error {
 		// LocalClient should not return an error if server successfully started.
 		return err
 	}
+	defer func() {
+		log.Debugf(ctx, "Logging out...")
+		logoutCtx, cancelLogout := xcontext.KeepAlive(ctx, 10*time.Second)
+		defer cancelLogout()
+		if err := client.Logout(logoutCtx); err != nil {
+			log.Errorf(ctx, "Failed to log out: %v", err)
+		}
+	}()
 	go func() {
 		defer wg.Done()
 		logStartupInfo(ctx, client)

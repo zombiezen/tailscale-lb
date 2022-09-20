@@ -9,6 +9,7 @@ require (
 	tailscale.com v1.30.2
 	zombiezen.com/go/ini v0.0.0-20220822235435-cadd66f53f27
 	zombiezen.com/go/log v1.1.0-beta1
+	zombiezen.com/go/xcontext v1.0.0
 )
 
 require (
