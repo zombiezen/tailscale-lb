@@ -99,6 +99,36 @@ func TestHostName(t *testing.T) {
 	}
 }
 
+func TestHostName4In6(t *testing.T) {
+	// Replicate buggy behavior from https://go.dev/issue/53554
+
+	ctx := testlog.WithTB(context.Background(), t)
+	rslv := fakeResolver{a: map[string][]netip.Addr{
+		"example.com": {
+			netip.MustParseAddr("::ffff:192.0.2.1"),
+		},
+	}}
+	lb := newLoadBalancer(rslv, []*backend{
+		{hostname: "example.com", port: 80},
+	})
+
+	got := make(map[netip.AddrPort]struct{})
+	for i := 0; i < 2; i++ {
+		addrPort, err := lb.pick(ctx)
+		if err != nil {
+			t.Error(err)
+			break
+		}
+		got[addrPort] = struct{}{}
+	}
+	want := map[netip.AddrPort]struct{}{
+		netip.MustParseAddrPort("192.0.2.1:80"): {},
+	}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("picked (-want +got):\n%s", diff)
+	}
+}
+
 func TestSRV(t *testing.T) {
 	ctx := testlog.WithTB(context.Background(), t)
 	rslv := fakeResolver{

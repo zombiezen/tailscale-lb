@@ -206,6 +206,14 @@ func lookup(ctx context.Context, out chan<- netip.AddrPort, resolver resolver, g
 		log.Warnf(ctx, "%v", err)
 		return nil
 	}
+	// Workaround for upstream Go weirdness: https://go.dev/issue/53554
+	// LookupNetIP can return IPv4-mapped IPv6 addresses,
+	// which can't directly be dialed.
+	for i, a := range addrs {
+		if a.Is4In6() {
+			addrs[i] = netip.AddrFrom4(a.As4())
+		}
+	}
 	if log.IsEnabled(log.Debug) {
 		addrsString := new(strings.Builder)
 		for i, a := range addrs {
