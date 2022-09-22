@@ -16,7 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Automatically log out from Tailscale on graceful exit.
+- Automatically log out from Tailscale on graceful exit
+  if running without a state directory.
+- Configuration order has been flipped so that
+  the last configuration file passed on the command-line
+  has the highest precedence.
 
 ## [0.1.1][] - 2022-09-19
 

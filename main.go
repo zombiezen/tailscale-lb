@@ -87,7 +87,11 @@ func main() {
 		flagSet.PrintDefaults()
 		os.Exit(exitUsage)
 	}
-	iniFiles, err := ini.ParseFiles(nil, flagSet.Args()...)
+	// Later INI arguments should take precedence over earlier arguments.
+	// Reverse the arguments to ParseFiles so the FileSet matches precedence.
+	iniPaths := append([]string(nil), flagSet.Args()...)
+	reverseSlice(iniPaths)
+	iniFiles, err := ini.ParseFiles(nil, iniPaths...)
 	if err != nil {
 		log.Errorf(ctx, "%v", err)
 		os.Exit(1)
@@ -324,6 +328,12 @@ func tailscaleLogf(ctx context.Context) logger.Logf {
 			ent.Msg = ent.Msg[:n-1]
 		}
 		logger.Log(ctx, ent)
+	}
+}
+
+func reverseSlice[T any](s []T) {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
 	}
 }
 
