@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased][]
 
+### Added
+
+- Add option to allow storing Tailscale state between runs.
+  This allows for non-ephemeral use cases.
+
 ### Changed
 
 - Automatically log out from Tailscale on graceful exit.

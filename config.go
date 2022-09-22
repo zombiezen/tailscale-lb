@@ -21,17 +21,20 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
+	"zombiezen.com/go/ini"
 	"zombiezen.com/go/log"
 )
 
 type configuration struct {
 	hostname string
 	authKey  string
+	stateDir string
 	tcpPorts map[uint16]*portConfig
 }
 
@@ -45,6 +48,14 @@ func (cfg *configuration) fill(source configer) error {
 	}
 	if cfg.authKey == "" {
 		cfg.authKey = source.Get("", "auth-key")
+	}
+	if cfg.stateDir == "" {
+		if v := source.Value("", "state-directory"); v != nil {
+			if v.Filename == "" {
+				return fmt.Errorf("configuration value for state-directory (line %d) has no file", v.Line)
+			}
+			cfg.stateDir = filepath.Join(filepath.Dir(v.Filename), v.Value)
+		}
 	}
 	for name := range source.Sections() {
 		const prefix = "tcp "
@@ -131,6 +142,7 @@ func (b *backend) String() string {
 
 type configer interface {
 	Get(section, key string) string
+	Value(section, key string) *ini.Value
 	Find(section, key string) []string
 	Sections() map[string]struct{}
 }

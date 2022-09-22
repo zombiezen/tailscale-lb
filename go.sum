@@ -293,8 +293,8 @@ nhooyr.io/websocket v1.8.7/go.mod h1:B70DZP8IakI65RVQ51MsWP/8jndNma26DVA/nFSCgW0
 software.sslmate.com/src/go-pkcs12 v0.0.0-20210415151418-c5206de65a78 h1:SqYE5+A2qvRhErbsXFfUEUmpWEKxxRSMgGLkvRAFOV4=
 tailscale.com v1.30.2 h1:aOoRbHmtIW/uZoP1o9YRyilffW4Nv9sqF6nQr7GWXzg=
 tailscale.com v1.30.2/go.mod h1:MO+tWkQp2YIF3KBnnej/mQvgYccRS5Xk/IrEpZ4Z3BU=
-zombiezen.com/go/ini v0.0.0-20220822235435-cadd66f53f27 h1:ptxb7hDASqFDkTOAIH4ANmlNIUNLzuMpnYW5o/TFfzY=
-zombiezen.com/go/ini v0.0.0-20220822235435-cadd66f53f27/go.mod h1:+TD85cq5iHXlTnhdJbaD4sBijR0y4ZnF5zkYjP8hRpE=
+zombiezen.com/go/ini v0.0.0-20220922030607-23a6472a8275 h1:qNmoOM4otFdCdDt4Qyf5vUGlAJTrr20Ce9ijO4g29CE=
+zombiezen.com/go/ini v0.0.0-20220922030607-23a6472a8275/go.mod h1:+TD85cq5iHXlTnhdJbaD4sBijR0y4ZnF5zkYjP8hRpE=
 zombiezen.com/go/log v1.1.0-beta1 h1:W9/YvlR//MHUPbZJC9tl7+GiryHLuGv/S8Z5SUTXjXY=
 zombiezen.com/go/log v1.1.0-beta1/go.mod h1:Eos1rXF8JpgK+h6NYITdTJslqFJJA3SaIJHMU75Sqfg=
 zombiezen.com/go/xcontext v1.0.0 h1:ggjoy/K+SKliNkvLszlTEQbajk1te/4AjzeBVTJcF4U=

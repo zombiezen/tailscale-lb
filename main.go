@@ -25,6 +25,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -33,8 +34,10 @@ import (
 	"golang.org/x/sync/errgroup"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/ipn"
+	"tailscale.com/ipn/store"
 	"tailscale.com/ipn/store/mem"
 	"tailscale.com/tsnet"
+	"tailscale.com/types/logger"
 	"zombiezen.com/go/ini"
 	"zombiezen.com/go/log"
 	"zombiezen.com/go/xcontext"
@@ -52,6 +55,7 @@ func main() {
 	}
 	var cfg configuration
 	flagSet.StringVar(&cfg.hostname, "hostname", "", "host`name` to send to Tailscale")
+	flagSet.StringVar(&cfg.stateDir, "state-directory", "", "`path` to directory to store Tailscale state in")
 	debug := flagSet.Bool("debug", false, "show debugging output")
 	debugTailscale := flagSet.Bool("debug-tailscale", false, "show all debugging output, including Tailscale")
 
@@ -107,28 +111,21 @@ func run(ctx context.Context, cfg *configuration) error {
 	}
 
 	srv := tsnet.Server{
-		// TODO(soon): Permit persisting state.
 		Store:     new(mem.Store),
 		Ephemeral: true,
 
 		Hostname: cfg.hostname,
 		AuthKey:  cfg.authKey,
-		Logf: func(format string, args ...any) {
-			ent := log.Entry{Time: time.Now(), Level: tailscaleLogLevel}
-			if _, file, line, ok := runtime.Caller(2); ok {
-				ent.File = file
-				ent.Line = line
-			}
-			logger := log.Default()
-			if !logger.LogEnabled(ent) {
-				return
-			}
-			ent.Msg = fmt.Sprintf(format, args...)
-			if n := len(ent.Msg); n > 0 && ent.Msg[n-1] == '\n' {
-				ent.Msg = ent.Msg[:n-1]
-			}
-			logger.Log(ctx, ent)
-		},
+		Logf:     tailscaleLogf(ctx),
+	}
+	if cfg.stateDir != "" {
+		srv.Ephemeral = false
+		// NewFileStore is responsible for creating its directory.
+		var err error
+		srv.Store, err = store.NewFileStore(tailscaleLogf(ctx), filepath.Join(cfg.stateDir, "tailscale-lb.state"))
+		if err != nil {
+			return err
+		}
 	}
 	if err := srv.Start(); err != nil {
 		return err
@@ -150,14 +147,20 @@ func run(ctx context.Context, cfg *configuration) error {
 		// LocalClient should not return an error if server successfully started.
 		return err
 	}
-	defer func() {
-		log.Debugf(ctx, "Logging out...")
-		logoutCtx, cancelLogout := xcontext.KeepAlive(ctx, 10*time.Second)
-		defer cancelLogout()
-		if err := client.Logout(logoutCtx); err != nil {
-			log.Errorf(ctx, "Failed to log out: %v", err)
-		}
-	}()
+	if cfg.stateDir == "" {
+		// If this is an ephemeral Tailscale node,
+		// then log out on exit if we can
+		// so the node doesn't linger in the admin console.
+		// Otherwise, don't log out so we can reuse credentials between runs.
+		defer func() {
+			log.Debugf(ctx, "Logging out...")
+			logoutCtx, cancelLogout := xcontext.KeepAlive(ctx, 10*time.Second)
+			defer cancelLogout()
+			if err := client.Logout(logoutCtx); err != nil {
+				log.Errorf(ctx, "Failed to log out: %v", err)
+			}
+		}()
+	}
 	go func() {
 		defer wg.Done()
 		logStartupInfo(ctx, client)
@@ -303,6 +306,25 @@ func handleTCPConn(ctx context.Context, clientConn net.Conn, lb *loadBalancer) {
 		return errConnDone
 	})
 	grp.Wait()
+}
+
+func tailscaleLogf(ctx context.Context) logger.Logf {
+	return func(format string, args ...any) {
+		ent := log.Entry{Time: time.Now(), Level: tailscaleLogLevel}
+		if _, file, line, ok := runtime.Caller(2); ok {
+			ent.File = file
+			ent.Line = line
+		}
+		logger := log.Default()
+		if !logger.LogEnabled(ent) {
+			return
+		}
+		ent.Msg = fmt.Sprintf(format, args...)
+		if n := len(ent.Msg); n > 0 && ent.Msg[n-1] == '\n' {
+			ent.Msg = ent.Msg[:n-1]
+		}
+		logger.Log(ctx, ent)
+	}
 }
 
 var errConnDone = errors.New("connection finished")

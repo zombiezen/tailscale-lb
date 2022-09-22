@@ -7,7 +7,7 @@ require (
 	golang.org/x/sync v0.0.0-20220907140024-f12130a52804
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8
 	tailscale.com v1.30.2
-	zombiezen.com/go/ini v0.0.0-20220822235435-cadd66f53f27
+	zombiezen.com/go/ini v0.0.0-20220922030607-23a6472a8275
 	zombiezen.com/go/log v1.1.0-beta1
 	zombiezen.com/go/xcontext v1.0.0
 )

@@ -50,10 +50,15 @@ Create a configuration file:
 # This is the hostname that will show up in the Tailscale console
 # and be used by MagicDNS.
 hostname = example
-# Generate an authentication key from https://login.tailscale.com/admin/settings/keys
+# (Optional) Use an authentication key from https://login.tailscale.com/admin/settings/keys
 # If you don't provide an auth key,
 # tailscale-lb will log a URL to visit in your browser to authenticate it.
 auth-key = tskey-foo
+# (Optional) If given, the load balancer will be non-ephemeral
+# and persist state in the given directory.
+# If the path is relative, it resolved relative to
+# the directory the configuration file is located in.
+state-directory = /var/lib/tailscale-lb
 
 # For each port you want to listen on,
 # add a section like this:
