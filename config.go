@@ -54,7 +54,11 @@ func (cfg *configuration) fill(source configer) error {
 			if v.Filename == "" {
 				return fmt.Errorf("configuration value for state-directory (line %d) has no file", v.Line)
 			}
-			cfg.stateDir = filepath.Join(filepath.Dir(v.Filename), v.Value)
+			if filepath.IsAbs(v.Value) {
+				cfg.stateDir = v.Value
+			} else {
+				cfg.stateDir = filepath.Join(filepath.Dir(v.Filename), v.Value)
+			}
 		}
 	}
 	for name := range source.Sections() {
