@@ -14,12 +14,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/a0b7e70db7a55088d3de0cc370a59f9fbcc906c3.tar.gz") {}
+{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/6ccc4a59c3f1b56d039d93da52696633e641bc71.tar.gz") {}
 }:
 
 let
   tailscale-lb = pkgs: pkgs.callPackage ./tailscale-lb.nix {
-    buildGoModule = pkgs.buildGo119Module;
+    buildGoModule = pkgs.buildGo120Module;
   };
 
   dockerImageName = "ghcr.io/zombiezen/tailscale-lb";
@@ -63,7 +63,7 @@ in
 
 {
   inherit pkgs;
-  go = pkgs.go_1_19;
+  go = pkgs.go_1_20;
   tailscale-lb = tailscale-lb pkgs;
 
   inherit mkDocker docker;

@@ -18,11 +18,13 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -40,6 +42,7 @@ import (
 	"tailscale.com/types/logger"
 	"zombiezen.com/go/ini"
 	"zombiezen.com/go/log"
+	"zombiezen.com/go/log/zstdlog"
 	"zombiezen.com/go/xcontext"
 )
 
@@ -135,9 +138,11 @@ func run(ctx context.Context, cfg *configuration) error {
 		return err
 	}
 	log.Infof(ctx, "Host %s connected to Tailscale", cfg.hostname)
+	ctx, cancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup
 	defer func() {
-		log.Debugf(ctx, "Shutting down...")
+		log.Infof(ctx, "Shutting down...")
+		cancel()
 		if err := srv.Close(); err != nil {
 			log.Errorf(ctx, "While shutting down: %v", err)
 		}
@@ -171,18 +176,58 @@ func run(ctx context.Context, cfg *configuration) error {
 	}()
 
 	systemResolver := new(net.Resolver)
-	for port, pc := range cfg.tcpPorts {
+	for port, pc := range cfg.ports {
+		pc := pc
 		log.Infof(ctx, "Listening for TCP port %d", port)
 		l, err := srv.Listen("tcp", fmt.Sprintf(":%d", port))
 		if err != nil {
 			return err
 		}
-		lb := newLoadBalancer(systemResolver, pc.backends)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			listenTCPPort(ctx, l, lb)
-		}()
+		switch {
+		case pc.tcp != nil:
+			lb := newLoadBalancer(systemResolver, pc.tcp.backends)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				listenTCPPort(ctx, l, lb)
+			}()
+		case pc.http != nil:
+			httpServer := &http.Server{
+				Handler: &httpLoadBalancer{
+					lb:        newLoadBalancer(systemResolver, pc.http.backends),
+					tailscale: client,
+					trustXFF:  pc.http.trustXFF,
+				},
+				BaseContext: func(net.Listener) context.Context { return ctx },
+				ErrorLog: zstdlog.New(log.Default(), &zstdlog.Options{
+					Context: ctx,
+					Level:   log.Error,
+				}),
+				ReadTimeout:  5 * time.Second,
+				WriteTimeout: 5 * time.Second,
+			}
+			if pc.http.tls {
+				httpServer.TLSConfig = &tls.Config{
+					GetCertificate: client.GetCertificate,
+				}
+			}
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				<-ctx.Done()
+				httpServer.Shutdown(context.Background())
+			}()
+			go func() {
+				defer wg.Done()
+				if pc.http.tls {
+					httpServer.ServeTLS(l, "", "")
+				} else {
+					httpServer.Serve(l)
+				}
+			}()
+		default:
+			panic("unreachable")
+		}
 	}
 	<-ctx.Done()
 	return nil

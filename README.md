@@ -62,24 +62,42 @@ state-directory = /var/lib/tailscale-lb
 
 # For each port you want to listen on,
 # add a section like this:
-[tcp 80]
+[tcp 22]
 # ... and then add one or more backends.
 # tailscale-lb will round-robin TCP connections
 # among the various IP addresses it discovers.
 # A backend can be one of:
 
 # a) An IPv4 address. If the port is omitted, then the section's port is used.
-backend = 127.0.0.1:80
+backend = 127.0.0.1:22
 
 # b) An IPv6 address. If the port is omitted, then the section's port is used.
-backend = [2001:db8::1234]:80
+backend = [2001:db8::1234]:22
 
 # c) A DNS name. If the port is omitted, then the section's port is used.
-backend = example.com:80
+backend = example.com:22
 
 # d) SRV records. The port is obtained from the SRV record.
 # Priority and weight are ignored.
-backend = srv _http._tcp.example.com
+backend = srv _ssh._tcp.example.com
+
+# For each HTTP port you want to listen on,
+# add a section like this:
+[http 80]
+
+# Backends are specified the same as above.
+backend = 127.0.0.1:80
+
+# Add the following request headers (default true):
+# Tailscale-User: The connecting user's email address
+# Tailscale-Name: The connecting user's display name
+# Tailscale-Profile-Picture: A URL to the connecting user's profile picture
+whois = true
+# Use the MagicDNS HTTPS Certificates described in https://tailscale.com/kb/1153/enabling-https/
+# (default false)
+tls = false
+# Whether to use the request-supplied X-Forwarded-For (default false).
+trust-x-forwarded-for = false
 ```
 
 Then run tailscale-lb with the configuration file as its argument.

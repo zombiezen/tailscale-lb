@@ -35,11 +35,27 @@ type configuration struct {
 	hostname string
 	authKey  string
 	stateDir string
-	tcpPorts map[uint16]*portConfig
+	ports    map[uint16]portConfig
 }
 
 type portConfig struct {
+	tcp  *tcpConfig
+	http *httpConfig
+}
+
+func (pc portConfig) isEmpty() bool {
+	return pc.tcp == nil && pc.http == nil
+}
+
+type tcpConfig struct {
 	backends []*backend
+}
+
+type httpConfig struct {
+	backends []*backend
+	whois    bool
+	trustXFF bool
+	tls      bool
 }
 
 func (cfg *configuration) fill(source configer) error {
@@ -61,35 +77,85 @@ func (cfg *configuration) fill(source configer) error {
 			}
 		}
 	}
-	for name := range source.Sections() {
-		const prefix = "tcp "
-		if !strings.HasPrefix(name, prefix) {
-			if name != "" {
-				log.Warnf(context.TODO(), "Unknown config section %q", name)
-			}
-			continue
-		}
-		n, err := strconv.ParseUint(name[len(prefix):], 10, 16)
-		if err != nil {
-			log.Warnf(context.TODO(), "Unknown config section %q", name)
-			continue
-		}
-		portNumber := uint16(n)
 
-		if cfg.tcpPorts == nil {
-			cfg.tcpPorts = make(map[uint16]*portConfig)
-		} else if cfg.tcpPorts[portNumber] != nil {
-			return fmt.Errorf("read config: conflicting definition of tcp %d", portNumber)
-		}
-		pc := new(portConfig)
-		cfg.tcpPorts[portNumber] = pc
-
-		for _, backendAddr := range source.Find(name, "backend") {
-			b, err := parseBackend(backendAddr, portNumber)
+	for sectionName := range source.Sections() {
+		switch {
+		case strings.HasPrefix(sectionName, "tcp "):
+			n, err := strconv.ParseUint(sectionName[len("tcp "):], 10, 16)
 			if err != nil {
-				return fmt.Errorf("read config: tcp %d: %v", portNumber, err)
+				log.Warnf(context.TODO(), "Unknown config section %q", sectionName)
+				continue
 			}
-			pc.backends = append(pc.backends, b)
+			portNumber := uint16(n)
+			if portNumber == 0 {
+				return fmt.Errorf("read config: cannot configure port 0")
+			}
+			if cfg.ports == nil {
+				cfg.ports = make(map[uint16]portConfig)
+			} else if !cfg.ports[portNumber].isEmpty() {
+				return fmt.Errorf("read config: conflicting definition of port %d", portNumber)
+			}
+			tc := new(tcpConfig)
+			cfg.ports[portNumber] = portConfig{tcp: tc}
+
+			for _, backendAddr := range source.Find(sectionName, "backend") {
+				b, err := parseBackend(backendAddr, portNumber)
+				if err != nil {
+					return fmt.Errorf("read config: tcp %d: %v", portNumber, err)
+				}
+				tc.backends = append(tc.backends, b)
+			}
+		case strings.HasPrefix(sectionName, "http "):
+			n, err := strconv.ParseUint(sectionName[len("http "):], 10, 16)
+			if err != nil {
+				log.Warnf(context.TODO(), "Unknown config section %q", sectionName)
+				continue
+			}
+			portNumber := uint16(n)
+			if portNumber == 0 {
+				return fmt.Errorf("read config: cannot configure port 0")
+			}
+			if cfg.ports == nil {
+				cfg.ports = make(map[uint16]portConfig)
+			} else if !cfg.ports[portNumber].isEmpty() {
+				return fmt.Errorf("read config: conflicting definition of port %d", portNumber)
+			}
+			hc := new(httpConfig)
+			cfg.ports[portNumber] = portConfig{http: hc}
+
+			if s := source.Get(sectionName, "tls"); s != "" {
+				var err error
+				hc.tls, err = strconv.ParseBool(s)
+				if err != nil {
+					return fmt.Errorf("read config: http %d: tls: %v", portNumber, err)
+				}
+			}
+			if s := source.Get(sectionName, "whois"); s != "" {
+				var err error
+				hc.whois, err = strconv.ParseBool(s)
+				if err != nil {
+					return fmt.Errorf("read config: http %d: whois: %v", portNumber, err)
+				}
+			}
+			if s := source.Get(sectionName, "trust-x-forwarded-for"); s != "" {
+				var err error
+				hc.trustXFF, err = strconv.ParseBool(s)
+				if err != nil {
+					return fmt.Errorf("read config: http %d: trust-x-forwarded-for: %v", portNumber, err)
+				}
+			}
+			for _, backendAddr := range source.Find(sectionName, "backend") {
+				b, err := parseBackend(backendAddr, portNumber)
+				if err != nil {
+					return fmt.Errorf("read config: http %d: %v", portNumber, err)
+				}
+				hc.backends = append(hc.backends, b)
+			}
+		default:
+			if sectionName != "" {
+				log.Warnf(context.TODO(), "Unknown config section %q", sectionName)
+			}
+			continue
 		}
 	}
 	return nil

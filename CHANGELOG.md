@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/zombiezen/tailscale-lb/compare/v0.2.1...main
 
+## [Unreleased][]
+
+### Added
+
+- HTTP reverse-proxying with `X-Forwarder-For` and Tailscale-specific features
+  like optional identity headers and automatic TLS certificates.
+
 ## [0.2.1][] - 2022-09-21
 
 [0.2.1]: https://github.com/zombiezen/tailscale-lb/releases/tag/v0.2.1
