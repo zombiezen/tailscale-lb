@@ -20,7 +20,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Nix
-        uses: cachix/install-nix-action@v16
+        uses: cachix/install-nix-action@v20
       - name: Set up cache
         uses: zombiezen/setup-nix-cache-action@v0.1.0
         with:
@@ -35,10 +35,12 @@ jobs:
         run: |
           IMAGE_TAG="$(echo ${{ github.ref_name }} | sed -e 's/^v//')-${{ matrix.arch }}"
           echo "::set-output name=tag::$IMAGE_TAG"
-          nix-build \
-            -E 'with import ./. {}; docker.${{ matrix.arch }}' \
+          nix build \
+            --file docker.nix \
             --argstr name "$IMAGE_NAME" \
-            --argstr tag "$IMAGE_TAG"
+            --argstr tag "$IMAGE_TAG" \
+            --argstr rev ${{ github.sha }} \
+            --argstr system x86_64-linux
       - name: Load into Docker
         run: docker load < result
       - name: Push to GitHub Container Registry

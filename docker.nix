@@ -1,4 +1,4 @@
-# Copyright 2022 Ross Light
+# Copyright 2023 Ross Light
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +14,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+{ name
+, tag
+, rev ? null
+, system ? builtins.currentSystem
+}:
+
 let
-  lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-  flakeCompatSource = fetchTarball {
-    url = "https://github.com/edolstra/flake-compat/archive/${lock.nodes.flake-compat.locked.rev}.tar.gz";
-    sha256 = lock.nodes.flake-compat.locked.narHash;
-  };
-  flakeCompat = import flakeCompatSource { src = ./.; };
+  flake = builtins.getFlake ("git+file:${builtins.toString ./.}" + (if !(builtins.isNull rev) then "?rev=${rev}&shallow=1" else ""));
 in
-  flakeCompat.shellNix
+  flake.lib.mkDocker {
+    pkgs = flake.lib.nixpkgs system;
+    inherit name tag;
+  }

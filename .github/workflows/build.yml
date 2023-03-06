@@ -13,11 +13,11 @@ on:
 
 jobs:
   nix-build:
-    name: nix-build
+    name: nix build
     runs-on: ubuntu-latest
     steps:
       - name: Install Nix
-        uses: cachix/install-nix-action@v16
+        uses: cachix/install-nix-action@v20
       - name: Set up cache
         uses: zombiezen/setup-nix-cache-action@v0.1.0
         with:
@@ -30,7 +30,7 @@ jobs:
       - id: build
         name: Build and test
         run: |
-          nix-build -A ci
+          nix build '.#ci'
           echo "::set-output name=result::$(readlink -f result)"
       - name: Upload Docker images
         uses: actions/upload-artifact@v3

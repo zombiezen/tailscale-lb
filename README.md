@@ -35,7 +35,13 @@ Alternatively, if you're using [Nix][], you can install the binary
 by checking out the repository and running the following:
 
 ```shell
-nix-env --file . --install -A tailscale-lb
+nix-env --file . --install
+```
+
+Or if you're using Nix flakes:
+
+```shell
+nix profile install github:zombiezen/tailscale-lb
 ```
 
 [Docker]: https://www.docker.com/

@@ -14,63 +14,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/6ccc4a59c3f1b56d039d93da52696633e641bc71.tar.gz") {}
-}:
-
 let
-  tailscale-lb = pkgs: pkgs.callPackage ./tailscale-lb.nix {
-    buildGoModule = pkgs.buildGo120Module;
+  lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+  flakeCompatSource = fetchTarball {
+    url = "https://github.com/edolstra/flake-compat/archive/${lock.nodes.flake-compat.locked.rev}.tar.gz";
+    sha256 = lock.nodes.flake-compat.locked.narHash;
   };
-
-  dockerImageName = "ghcr.io/zombiezen/tailscale-lb";
-  mkDocker =
-    { pkgs
-    , name ? dockerImageName
-    , tag ? null
-    }:
-    let
-      tailscale-lb' = tailscale-lb pkgs;
-    in
-      pkgs.dockerTools.buildImage {
-        inherit name;
-        tag = if builtins.isNull tag then tailscale-lb'.version else tag;
-
-        copyToRoot = pkgs.buildEnv {
-          name = "tailscale-lb";
-          paths = [
-            tailscale-lb'
-            pkgs.cacert
-          ];
-        };
-
-        config = {
-          Entrypoint = [ "/bin/tailscale-lb" ];
-
-          Labels = {
-            "org.opencontainers.image.source" = "https://github.com/zombiezen/tailscale-lb";
-            "org.opencontainers.image.licenses" = "Apache-2.0";
-            "org.opencontainers.image.version" = tailscale-lb'.version;
-          };
-        };
-      };
-  docker = {
-    amd64 = args@{ name ? dockerImageName, tag ? null }:
-      mkDocker (args // { pkgs = pkgs.pkgsCross.musl64; });
-    arm64 = args@{ name ? dockerImageName, tag ? null }:
-      mkDocker (args // { pkgs = pkgs.pkgsCross.aarch64-multiplatform-musl; });
-  };
+  flakeCompat = import flakeCompatSource { src = ./.; };
 in
-
-{
-  inherit pkgs;
-  go = pkgs.go_1_20;
-  tailscale-lb = tailscale-lb pkgs;
-
-  inherit mkDocker docker;
-
-  ci = pkgs.linkFarm "tailscale-lb-ci" [
-    { name = "tailscale-lb"; path = tailscale-lb pkgs; }
-    { name = "docker-image-tailscale-lb-amd64.tar.gz"; path = docker.amd64 {}; }
-    { name = "docker-image-tailscale-lb-arm64.tar.gz"; path = docker.arm64 {}; }
-  ];
-}
+  flakeCompat.defaultNix

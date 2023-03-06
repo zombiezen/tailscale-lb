@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - HTTP reverse-proxying with `X-Forwarder-For` and Tailscale-specific features
   like optional identity headers and automatic TLS certificates.
+- Nix packaging has now been converted into a flake.
+
+### Changed
+
+- `default.nix` now just evaluates to the tailscale-lb derivation.
 
 ## [0.2.1][] - 2022-09-21
 
