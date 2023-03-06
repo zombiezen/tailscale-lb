@@ -22,7 +22,7 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v20
       - name: Set up cache
-        uses: zombiezen/setup-nix-cache-action@v0.1.0
+        uses: zombiezen/setup-nix-cache-action@v0.2.0
         with:
           substituters: s3://zombiezen-tailscale-lb-nixcache?endpoint=https://storage.googleapis.com
           secret_keys: ${{ secrets.NIX_PRIVATE_KEY }}
