@@ -29,7 +29,7 @@ jobs:
           aws_access_key_id: ${{ secrets.GCS_HMAC_ACCESS_ID }}
           aws_secret_access_key: ${{ secrets.GCS_HMAC_SECRET_ACCESS_KEY }}
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - id: build
         name: Build
         run: |
