@@ -34,7 +34,7 @@ jobs:
         name: Build
         run: |
           IMAGE_TAG="$(echo ${{ github.ref_name }} | sed -e 's/^v//')-${{ matrix.arch }}"
-          echo "::set-output name=tag::$IMAGE_TAG"
+          echo "tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
           nix build \
             --file docker.nix \
             --argstr name "$IMAGE_NAME" \
@@ -60,7 +60,7 @@ jobs:
         name: Create manifest
         run: |
           IMAGE_TAG="$(echo ${{ github.ref_name }} | sed -e 's/^v//')"
-          echo "::set-output name=tag::$IMAGE_TAG"
+          echo "tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
           docker manifest create \
             "${IMAGE_NAME}:${IMAGE_TAG}" \
             "${IMAGE_NAME}:${IMAGE_TAG}-amd64" \

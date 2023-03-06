@@ -31,7 +31,7 @@ jobs:
         name: Build and test
         run: |
           nix build '.#ci'
-          echo "::set-output name=result::$(readlink -f result)"
+          echo "result=$(readlink -f result)" >> "$GITHUB_OUTPUT"
       - name: Upload Docker images
         uses: actions/upload-artifact@v3
         with:
