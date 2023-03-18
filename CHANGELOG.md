@@ -22,6 +22,7 @@ Version 0.3 adds HTTP-aware reverse-proxying.
 ### Changed
 
 - `default.nix` now just evaluates to the tailscale-lb derivation.
+- Upgraded `tsnet` to 1.38.1.
 
 ## [0.2.1][] - 2022-09-21
 
@@ -49,7 +50,6 @@ Version 0.2 adds the ability to persist the Tailscale IP address between runs.
 - Configuration order has been flipped so that
   the last configuration file passed on the command-line
   has the highest precedence.
-- Upgraded `tsnet` to 1.38.1.
 
 ## [0.1.1][] - 2022-09-19
 
