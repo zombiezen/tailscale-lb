@@ -127,6 +127,7 @@ func run(ctx context.Context, cfg *configuration) error {
 	}
 	if cfg.stateDir != "" {
 		srv.Ephemeral = false
+		srv.Dir = cfg.stateDir
 		// NewFileStore is responsible for creating its directory.
 		var err error
 		srv.Store, err = store.NewFileStore(tailscaleLogf(ctx), filepath.Join(cfg.stateDir, "tailscale-lb.state"))
