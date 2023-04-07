@@ -44,6 +44,13 @@ Or if you're using Nix flakes:
 nix profile install github:zombiezen/tailscale-lb
 ```
 
+If you are deploying to Kubernetes, example manifests are provided in the `deploy` folder that can also be built with `kustomize`. Make sure to update the value of `TAILSCALE_AUTH_KEY` in secret.yaml to be an authentication key that you have generated from your [Tailscale Console][].
+
+```shell
+kubectl apply -k deploy
+```
+
+[Tailscale Console]: https://login.tailscale.com/admin/settings/keys
 [Docker]: https://www.docker.com/
 [GitHub Container Registry]: https://github.com/zombiezen/tailscale-lb/pkgs/container/tailscale-lb
 [Nix]: https://nixos.org/

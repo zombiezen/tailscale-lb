@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: tailscale-lb
+    app.kubernetes.io/instance: tailscale-lb
+  name: tailscale-lb
+  namespace: tailscale-lb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tailscale-lb
+      app.kubernetes.io/instance: tailscale-lb
+  strategy:
+    rollingUpdate:
+      maxSurge: 100%
+      maxUnavailable: 0%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tailscale-lb
+        app.kubernetes.io/instance: tailscale-lb
+    spec:
+      containers:
+        - image: ghcr.io/zombiezen/tailscale-lb:latest
+          imagePullPolicy: IfNotPresent
+          name: tailscale-lb
+          args:
+            - /etc/tailscale/tailscale-lb.ini
+          resources: {}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tailscale
+      initContainers:
+        - image: alpine:latest
+          imagePullPolicy: IfNotPresent
+          name: config
+          command:
+            - /bin/sh
+            - -c
+            - |
+              apk -q update && apk -q add gettext
+              envsubst < /tmp/config-template/tailscale-lb.ini.tpl | cat > /tmp/config/tailscale-lb.ini
+          envFrom:
+            - secretRef:
+                name: tailscale-lb
+          volumeMounts:
+            - name: config
+              mountPath: /tmp/config
+            - name: config-template
+              mountPath: /tmp/config-template
+      volumes:
+        - name: config
+          emptyDir: {}
+        - name: config-template
+          configMap:
+            name: tailscale-lb
+      restartPolicy: Always
