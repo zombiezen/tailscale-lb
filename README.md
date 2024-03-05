@@ -73,6 +73,9 @@ auth-key = tskey-foo
 # the directory the configuration file is located in.
 state-directory = /var/lib/tailscale-lb
 
+# (Optional) Specify the coordination server URL
+# control-url = https://headscale.example
+
 # For each port you want to listen on,
 # add a section like this:
 [tcp 22]

@@ -125,6 +125,9 @@ func run(ctx context.Context, cfg *configuration) error {
 		AuthKey:  cfg.authKey,
 		Logf:     tailscaleLogf(ctx),
 	}
+	if cfg.controlURL != "" {
+		srv.ControlURL = cfg.controlURL
+	}
 	if cfg.stateDir != "" {
 		srv.Ephemeral = false
 		srv.Dir = cfg.stateDir

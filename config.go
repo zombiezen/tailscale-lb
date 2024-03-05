@@ -32,10 +32,11 @@ import (
 )
 
 type configuration struct {
-	hostname string
-	authKey  string
-	stateDir string
-	ports    map[uint16]portConfig
+	hostname   string
+	authKey    string
+	controlURL string
+	stateDir   string
+	ports      map[uint16]portConfig
 }
 
 type portConfig struct {
@@ -64,6 +65,9 @@ func (cfg *configuration) fill(source configer) error {
 	}
 	if cfg.authKey == "" {
 		cfg.authKey = source.Get("", "auth-key")
+	}
+	if cfg.controlURL == "" {
+		cfg.controlURL = source.Get("", "control-url")
 	}
 	if cfg.stateDir == "" {
 		if v := source.Value("", "state-directory"); v != nil {
