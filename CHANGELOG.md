@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/zombiezen/tailscale-lb/compare/v0.3.0...main
 
+## [Unreleased][]
+
+### Added
+
+- New `control-url` configuration setting permits using a self-hosted coordination server
+  ([#5](https://github.com/zombiezen/tailscale-lb/pull/5)).
+
+### Changed
+
+- Upgraded `tsnet` to 1.60.1.
+
 ## [0.3.0][] - 2023-03-18
 
 Version 0.3 adds HTTP-aware reverse-proxying.
