@@ -26,7 +26,7 @@ Version 0.3 adds HTTP-aware reverse-proxying.
 
 ### Added
 
-- HTTP reverse-proxying with `X-Forwarder-For` and Tailscale-specific features
+- HTTP reverse-proxying with `X-Forwarded-For` and Tailscale-specific features
   like optional identity headers and automatic TLS certificates.
 - Nix packaging has now been converted into a flake.
 
