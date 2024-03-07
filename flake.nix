@@ -26,7 +26,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, ... }@inputs:
+  outputs = { self, nixpkgs, flake-utils, ... }:
   let
     supportedSystems = [
       flake-utils.lib.system.x86_64-linux
@@ -67,8 +67,8 @@
       };
 
       devShells.default = pkgs.mkShell {
-        packages = [
-          pkgs.go_1_22
+        inputsFrom = [
+          self.packages.${system}.default
         ];
       };
     }) // {
@@ -76,7 +76,7 @@
         nixpkgs = system: import nixpkgs { inherit system; };
 
         mkTailscaleLB = pkgs: pkgs.callPackage ./tailscale-lb.nix {
-          buildGoModule = pkgs.buildGo120Module;
+          buildGoModule = pkgs.buildGo122Module;
         };
 
         mkDocker =
