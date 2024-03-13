@@ -15,27 +15,29 @@ jobs:
       matrix:
         arch: ["amd64", "arm64"]
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
       - name: Log into GitHub Container Registry
         run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u zombiezen --password-stdin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Nix
-        uses: cachix/install-nix-action@v20
+        uses: cachix/install-nix-action@v26
       - name: Set up cache
-        uses: zombiezen/setup-nix-cache-action@v0.2.0
+        uses: zombiezen/setup-nix-cache-action@v0.3.0
         with:
           substituters: s3://zombiezen-tailscale-lb-nixcache?endpoint=https://storage.googleapis.com
           secret_keys: ${{ secrets.NIX_PRIVATE_KEY }}
           aws_access_key_id: ${{ secrets.GCS_HMAC_ACCESS_ID }}
           aws_secret_access_key: ${{ secrets.GCS_HMAC_SECRET_ACCESS_KEY }}
-      - name: Check out code
-        uses: actions/checkout@v3
+          use_nixcached: true
       - id: build
         name: Build
         run: |
           IMAGE_TAG="$(echo ${{ github.ref_name }} | sed -e 's/^v//')-${{ matrix.arch }}"
           echo "tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
           nix build \
+            --print-build-logs \
             --file docker.nix \
             --argstr name "$IMAGE_NAME" \
             --argstr tag "$IMAGE_TAG" \
