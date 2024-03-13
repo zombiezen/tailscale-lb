@@ -27,7 +27,6 @@ jobs:
           secret_keys: ${{ secrets.NIX_PRIVATE_KEY }}
           aws_access_key_id: ${{ secrets.GCS_HMAC_ACCESS_ID }}
           aws_secret_access_key: ${{ secrets.GCS_HMAC_SECRET_ACCESS_KEY }}
-          use_nixcached: true
       - id: build
         name: Build and test
         run: |
