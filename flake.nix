@@ -19,6 +19,7 @@
 
   inputs = {
     nixpkgs.url = "nixpkgs";
+    nixpkgs-tf.url = "nixpkgs/a0b7e70db7a55088d3de0cc370a59f9fbcc906c3";
     flake-utils.url = "flake-utils";
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -26,7 +27,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, ... }:
+  outputs = { self, nixpkgs, nixpkgs-tf, flake-utils, ... }:
   let
     supportedSystems = [
       flake-utils.lib.system.x86_64-linux
@@ -38,6 +39,12 @@
     flake-utils.lib.eachSystem supportedSystems (system:
     let
       pkgs = self.lib.nixpkgs system;
+      pkgs-tf = import nixpkgs-tf { inherit system; };
+      terraform = pkgs-tf.terraform_1.withPlugins (p: [
+        p.github
+        p.google
+        p.time
+      ]);
     in
     {
       packages = {
@@ -69,6 +76,12 @@
       devShells.default = pkgs.mkShell {
         inputsFrom = [
           self.packages.${system}.default
+        ];
+      };
+
+      devShells.infra = pkgs.mkShell {
+        packages = [
+          terraform
         ];
       };
     }) // {
