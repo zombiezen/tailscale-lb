@@ -30,7 +30,7 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v26
       - name: Set up cache
-        uses: zombiezen/setup-nix-cache-action@v0.3.0
+        uses: zombiezen/setup-nix-cache-action@v0.3.1
         with:
           substituters: ${{ vars.NIX_SUBSTITUTER }}
           secret_keys: ${{ secrets.NIX_PRIVATE_KEY }}
