@@ -1,3 +1,3 @@
 output "cache_bucket" {
-  value = "gs://${google_storage_bucket.nixcache.name}"
+  value = module.nix_cache.nixcached_substituter
 }

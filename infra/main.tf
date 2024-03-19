@@ -15,7 +15,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 terraform {
-  required_version = "1.2.9"
+  required_version = "1.7.4"
 
   backend "remote" {
     organization = "zombiezen"
@@ -27,11 +27,11 @@ terraform {
 
   required_providers {
     google = {
-      version = "4.34.0"
+      version = "5.13.0"
     }
     github = {
       source  = "integrations/github"
-      version = "4.31.0"
+      version = "5.43.0"
     }
   }
 }
@@ -41,19 +41,19 @@ provider "google" {
 }
 
 provider "github" {
-  owner = "zombiezen"
+  owner = local.github_repository_owner
 }
 
 data "google_project" "project" {
 }
 
-resource "google_project_service" "cloudresourcemanager" {
-  service            = "cloudresourcemanager.googleapis.com"
-  disable_on_destroy = false
+locals {
+  github_repository_owner = "zombiezen"
+  github_repository_name  = "tailscale-lb"
 }
 
-resource "google_project_service" "storage" {
-  service            = "storage.googleapis.com"
+resource "google_project_service" "cloudresourcemanager" {
+  service            = "cloudresourcemanager.googleapis.com"
   disable_on_destroy = false
 }
 
@@ -71,65 +71,45 @@ resource "google_service_account" "github_actions" {
   ]
 }
 
-resource "google_storage_hmac_key" "github_actions" {
+module "nix_cache" {
+  source = "zombiezen/nix-cache/google"
+  version = "0.2.1"
+
+  bucket_name = "${data.google_project.project.project_id}-nixcache"
+  bucket_location      = "us"
+
   service_account_email = google_service_account.github_actions.email
+  hmac_key = false
 }
 
-resource "github_actions_secret" "gcs_hmac_access_id" {
-  repository      = "tailscale-lb"
-  secret_name     = "GCS_HMAC_ACCESS_ID"
-  plaintext_value = google_storage_hmac_key.github_actions.access_id
-}
+module "github_identity_pool" {
+  source  = "zombiezen/github-identity/google"
+  version = "0.1.2"
 
-resource "github_actions_secret" "gcs_hmac_secret" {
-  repository      = "tailscale-lb"
-  secret_name     = "GCS_HMAC_SECRET_ACCESS_KEY"
-  plaintext_value = google_storage_hmac_key.github_actions.secret
-}
+  attribute_condition = "assertion.repository=='${local.github_repository_owner}/${local.github_repository_name}'"
 
-resource "google_storage_bucket" "nixcache" {
-  name          = "${data.google_project.project.project_id}-nixcache"
-  location      = "us"
-  storage_class = "STANDARD"
-
-  uniform_bucket_level_access = true
-
-  versioning {
-    enabled = true
-  }
-
-  lifecycle_rule {
-    action {
-      type = "Delete"
-    }
-    condition {
-      num_newer_versions = 2
-      with_state         = "ARCHIVED"
+  service_accounts = {
+    main = {
+      subject              = "${local.github_repository_owner}/${local.github_repository_name}"
+      service_account_name = google_service_account.github_actions.name
     }
   }
-
-  lifecycle_rule {
-    action {
-      type = "Delete"
-    }
-    condition {
-      days_since_noncurrent_time = 7
-    }
-  }
-
-  depends_on = [
-    google_project_service.storage,
-  ]
 }
 
-resource "google_storage_bucket_iam_member" "github_nixcache_viewer" {
-  bucket = google_storage_bucket.nixcache.name
-  role   = "roles/storage.objectViewer"
-  member = "serviceAccount:${google_service_account.github_actions.email}"
+resource "github_actions_variable" "nix_substituter" {
+  repository    = local.github_repository_name
+  variable_name = "NIX_SUBSTITUTER"
+  value         = module.nix_cache.nixcached_substituter
 }
 
-resource "google_storage_bucket_iam_member" "github_nixcache_creator" {
-  bucket = google_storage_bucket.nixcache.name
-  role   = "roles/storage.objectCreator"
-  member = "serviceAccount:${google_service_account.github_actions.email}"
+resource "github_actions_variable" "workload_identity_provider" {
+  repository    = local.github_repository_name
+  variable_name = "GOOGLE_WORKLOAD_IDENTITY_PROVIDER"
+  value         = module.github_identity_pool.pool_provider_name
+}
+
+resource "github_actions_variable" "service_account" {
+  repository    = local.github_repository_name
+  variable_name = "GOOGLE_SERVICE_ACCOUNT"
+  value         = google_service_account.github_actions.email
 }

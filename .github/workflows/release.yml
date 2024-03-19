@@ -17,6 +17,12 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+      - name: Authenticate to Google Cloud Platform
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ vars.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GOOGLE_SERVICE_ACCOUNT }}
+          token_format: access_token
       - name: Log into GitHub Container Registry
         run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u zombiezen --password-stdin
         env:
@@ -26,10 +32,9 @@ jobs:
       - name: Set up cache
         uses: zombiezen/setup-nix-cache-action@v0.3.0
         with:
-          substituters: s3://zombiezen-tailscale-lb-nixcache?endpoint=https://storage.googleapis.com
+          substituters: ${{ vars.NIX_SUBSTITUTER }}
           secret_keys: ${{ secrets.NIX_PRIVATE_KEY }}
-          aws_access_key_id: ${{ secrets.GCS_HMAC_ACCESS_ID }}
-          aws_secret_access_key: ${{ secrets.GCS_HMAC_SECRET_ACCESS_KEY }}
+          use_nixcached: true
       - id: build
         name: Build
         run: |

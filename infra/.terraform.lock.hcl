@@ -2,17 +2,16 @@
 # Manual edits may be lost in future updates.
 
 provider "registry.terraform.io/hashicorp/google" {
-  version     = "4.34.0"
-  constraints = "4.34.0"
+  version     = "5.13.0"
+  constraints = ">= 4.0.0, < 6.0.0"
   hashes = [
-    "h1:XC9p/GQNSCThPkCo61ccas6TX4Mx4kcn+VAEQqdD+6E=",
+    "h1:PIeYPTPtzSqBQR8f3yz1RsNYx1ocIE/uoGZjYcGaxas=",
   ]
 }
 
 provider "registry.terraform.io/integrations/github" {
-  version     = "4.31.0"
-  constraints = "4.31.0"
+  version = "5.43.0"
   hashes = [
-    "h1:i3rZPMmq+LCeE0w6XqUPFdBHYk8Bd4Q+MoETTUqgWms=",
+    "h1:VPRM4zIFhq7vzNwkCozr+srIXe1jjCcDf2XN0fSPmU4=",
   ]
 }

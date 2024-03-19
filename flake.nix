@@ -19,7 +19,6 @@
 
   inputs = {
     nixpkgs.url = "nixpkgs";
-    nixpkgs-tf.url = "nixpkgs/a0b7e70db7a55088d3de0cc370a59f9fbcc906c3";
     flake-utils.url = "flake-utils";
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -27,7 +26,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-tf, flake-utils, ... }:
+  outputs = { self, nixpkgs, flake-utils, ... }:
   let
     supportedSystems = [
       flake-utils.lib.system.x86_64-linux
@@ -39,8 +38,7 @@
     flake-utils.lib.eachSystem supportedSystems (system:
     let
       pkgs = self.lib.nixpkgs system;
-      pkgs-tf = import nixpkgs-tf { inherit system; };
-      terraform = pkgs-tf.terraform_1.withPlugins (p: [
+      terraform = pkgs.terraform_1.withPlugins (p: [
         p.github
         p.google
         p.time
@@ -86,7 +84,12 @@
       };
     }) // {
       lib = {
-        nixpkgs = system: import nixpkgs { inherit system; };
+        nixpkgs = system: import nixpkgs {
+          inherit system;
+          config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.strings.getName pkg) [
+            "terraform"
+          ];
+        };
 
         mkTailscaleLB = pkgs: pkgs.callPackage ./tailscale-lb.nix {
           buildGoModule = pkgs.buildGo122Module;
