@@ -92,7 +92,7 @@
         };
 
         mkTailscaleLB = pkgs: pkgs.callPackage ./tailscale-lb.nix {
-          buildGoModule = pkgs.buildGo122Module;
+          buildGoModule = pkgs.buildGo124Module;
         };
 
         mkDocker =

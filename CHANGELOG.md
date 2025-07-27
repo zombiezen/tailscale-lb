@@ -9,10 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased][]
 
+### Changed
+
+- Upgraded `tsnet` to 1.86.1.
+
 ### Fixed
 
 - Docker images are now correctly built for ARM64
   ([#6](https://github.com/zombiezen/tailscale-lb/issues/6)).
+- Upgraded dependencies to fix various potential security vulnerabilities.
 
 ## [0.4.0][] - 2024-03-19
 
