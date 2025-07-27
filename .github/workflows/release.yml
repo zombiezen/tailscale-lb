@@ -40,13 +40,21 @@ jobs:
         run: |
           IMAGE_TAG="$(echo ${{ github.ref_name }} | sed -e 's/^v//')-${{ matrix.arch }}"
           echo "tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          case '${{ matrix.arch }}' in
+            amd64)
+              hostSystem=x86_64-linux
+            arm64)
+              hostSystem=aarch64-linux
+            *)
+              echo 'invalid arch ${{ matrix.arch }}' >&2
+          esac
           nix build \
             --print-build-logs \
             --file docker.nix \
             --argstr name "$IMAGE_NAME" \
             --argstr tag "$IMAGE_TAG" \
             --argstr rev ${{ github.sha }} \
-            --argstr system x86_64-linux
+            --argstr hostSystem "$hostSystem"
       - name: Load into Docker
         run: docker load < result
       - name: Push to GitHub Container Registry

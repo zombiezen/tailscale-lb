@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/zombiezen/tailscale-lb/compare/v0.4.0...main
 
+## [Unreleased][]
+
+### Fixed
+
+- Docker images are now correctly built for ARM64
+  ([#6](https://github.com/zombiezen/tailscale-lb/issues/6)).
+
 ## [0.4.0][] - 2024-03-19
 
 Version 0.4 adds the ability to use a self-hosted coordination server.

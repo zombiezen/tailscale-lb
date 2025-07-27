@@ -18,12 +18,23 @@
 , tag
 , rev ? null
 , system ? builtins.currentSystem
+, hostSystem ? system
 }:
 
 let
   flake = builtins.getFlake ("git+file:${builtins.toString ./.}" + (if !(builtins.isNull rev) then "?rev=${rev}&shallow=1" else ""));
+  pkgs = flake.lib.nixpkgs system;
+  hostPlatform = pkgs.lib.systems.elaborate hostSystem;
 in
   flake.lib.mkDocker {
-    pkgs = flake.lib.nixpkgs system;
+    pkgs =
+      if hostSystem == system then
+        pkgs
+      else if hostPlatform.isLinux && hostPlatform.isx86_64 then
+        pkgs.pkgsCross.musl64
+      else if hostPlatform.isLinux && hostPlatform.isAarch64 then
+        pkgs.pkgsCross.aarch64-multiplatform-musl
+      else
+        throw "unsupported hostSystem ${hostSystem}";
     inherit name tag;
   }
