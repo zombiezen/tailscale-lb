@@ -43,10 +43,13 @@ jobs:
           case '${{ matrix.arch }}' in
             amd64)
               hostSystem=x86_64-linux
+              ;;
             arm64)
               hostSystem=aarch64-linux
+              ;;
             *)
               echo 'invalid arch ${{ matrix.arch }}' >&2
+              ;;
           esac
           nix build \
             --print-build-logs \

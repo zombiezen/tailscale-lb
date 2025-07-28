@@ -5,14 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-[Unreleased]: https://github.com/zombiezen/tailscale-lb/compare/v0.5.0...main
+[Unreleased]: https://github.com/zombiezen/tailscale-lb/compare/v0.5.1...main
 
-## [0.5.0][] - 2025-07-27
+## [0.5.1][] - 2025-07-27
 
 Version 0.5 uses the same identity headers as `tailscale serve`
 and includes various updates.
 
-[0.5.0]: https://github.com/zombiezen/tailscale-lb/releases/tag/v0.5.0
+[0.5.1]: https://github.com/zombiezen/tailscale-lb/releases/tag/v0.5.1
 
 ### Changed
 
@@ -25,6 +25,12 @@ and includes various updates.
 - Docker images are now correctly built for ARM64
   ([#6](https://github.com/zombiezen/tailscale-lb/issues/6)).
 - Upgraded dependencies to fix various potential security vulnerabilities.
+
+## [0.5.0][] - 2025-07-27
+
+Version 0.5.0 had a failed release process.
+
+[0.5.0]: https://github.com/zombiezen/tailscale-lb/releases/tag/v0.5.0
 
 ## [0.4.0][] - 2024-03-19
 

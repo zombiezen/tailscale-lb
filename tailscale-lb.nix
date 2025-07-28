@@ -45,7 +45,7 @@ in
 
 buildGoModule {
   pname = "tailscale-lb";
-  version = "0.5.0";
+  version = "0.5.1";
 
   inherit src;
 
