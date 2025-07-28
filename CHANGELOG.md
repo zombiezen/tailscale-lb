@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Identity headers now use the same names as `tailscale serve`
+  ([#4](https://github.com/zombiezen/tailscale-lb/issues/4)).
 - Upgraded `tsnet` to 1.86.1.
 
 ### Fixed

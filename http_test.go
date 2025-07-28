@@ -54,14 +54,14 @@ func TestHTTPLoadBalancer(t *testing.T) {
 		if got, want := r.URL.Path, wantPath; got != want {
 			t.Errorf(":path = %q; want %q", got, want)
 		}
-		if got, want := r.Header.Get("Tailscale-User"), wantUser; got != want {
-			t.Errorf("Tailscale-User = %q; want %q", got, want)
+		if got, want := r.Header.Get("Tailscale-User-Login"), wantUser; got != want {
+			t.Errorf("Tailscale-User-Login = %q; want %q", got, want)
 		}
-		if got, want := r.Header.Get("Tailscale-Name"), wantDisplayName; got != want {
-			t.Errorf("Tailscale-Name = %q; want %q", got, want)
+		if got, want := r.Header.Get("Tailscale-User-Name"), wantDisplayName; got != want {
+			t.Errorf("Tailscale-User-Name = %q; want %q", got, want)
 		}
-		if got, want := r.Header.Get("Tailscale-Profile-Picture"), wantProfilePictureURL; got != want {
-			t.Errorf("Tailscale-Profile-Picture = %q; want %q", got, want)
+		if got, want := r.Header.Get("Tailscale-User-Profile-Pic"), wantProfilePictureURL; got != want {
+			t.Errorf("Tailscale-User-Profile-Pic = %q; want %q", got, want)
 		}
 		if got := r.Header.Values(userProvidedHeader); len(got) > 0 {
 			t.Errorf("%s = %q; want []", userProvidedHeader, got)

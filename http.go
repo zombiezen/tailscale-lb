@@ -18,10 +18,12 @@ package main
 
 import (
 	"context"
+	"mime"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"unicode/utf8"
 
 	"tailscale.com/client/tailscale"
 	"tailscale.com/client/tailscale/apitype"
@@ -85,12 +87,10 @@ func (hlb *httpLoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if hlb.whoisHeaders {
 				whois := <-whoisChan
 				if whois != nil {
-					// Reference: https://github.com/tailscale/tailscale/tree/10b20fd1c725f1627d2fad43acbd727b13cb9dbf/cmd/nginx-auth#headers
-
-					// TODO(soon): ID?
-					r.Out.Header.Set("Tailscale-User", whois.UserProfile.LoginName)
-					r.Out.Header.Set("Tailscale-Name", whois.UserProfile.DisplayName)
-					r.Out.Header.Set("Tailscale-Profile-Picture", whois.UserProfile.ProfilePicURL)
+					// Reference: https://tailscale.com/kb/1312/serve#identity-headers
+					setHeader(r.Out.Header, "Tailscale-User-Login", whois.UserProfile.LoginName)
+					setHeader(r.Out.Header, "Tailscale-User-Name", whois.UserProfile.DisplayName)
+					setHeader(r.Out.Header, "Tailscale-User-Profile-Pic", whois.UserProfile.ProfilePicURL)
 				}
 			}
 		},
@@ -100,4 +100,11 @@ func (hlb *httpLoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}),
 	}
 	proxy.ServeHTTP(w, r)
+}
+
+func setHeader(h http.Header, k, v string) {
+	if v == "" || !utf8.ValidString(v) {
+		return
+	}
+	h.Set(k, mime.QEncoding.Encode("utf-8", v))
 }
